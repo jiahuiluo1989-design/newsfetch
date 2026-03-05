@@ -1,0 +1,21 @@
+[project]
+name = "news-pipeline"
+version = "0.1.0"
+description = "RSS to Feishu news pipeline"
+[[project.authors]]
+name = "Your Name"
+email = "you@example.com"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "*"
+pyyaml = "*"
+feedparser = "*"
+python-dotenv = "*"
+google-genai = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
+[tool.poetry.packages]
+news_pipeline = { "from" = "src" }
