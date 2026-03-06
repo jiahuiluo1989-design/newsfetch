@@ -16,6 +16,9 @@ FEISHU_HOST = os.getenv("FEISHU_HOST", "https://open.feishu.cn")
 
 # AI key for scoring/summarization
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SUMMARIZER_API_BASE_URL = os.getenv("SUMMARIZER_API_BASE_URL", "https://api.gptsapi.net")
+SUMMARIZER_API_KEY = os.getenv("SUMMARIZER_API_KEY")
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gpt-4o-mini")
 
 # Optional HTTP/HTTPS proxy (e.g. http://localhost:15236)
 HTTP_PROXY = os.getenv("HTTP_PROXY")

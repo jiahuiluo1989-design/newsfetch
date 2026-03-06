@@ -40,8 +40,13 @@ Recommended:
 - `FEISHU_MAX_RETRIES=3`
 - `FEISHU_RETRY_BACKOFF_SECONDS=1.5`
 - `FEISHU_INTER_REQUEST_DELAY_SECONDS=0.2`
+- `SUMMARIZER_API_BASE_URL=https://api.gptsapi.net`
+- `SUMMARIZER_API_KEY=...`
+- `SUMMARIZER_MODEL=gpt-4o-mini`
 
-Note: `OPENAI_API_KEY` is currently used by the Gemini client in code. If quota is exhausted, scoring/summarization falls back to heuristic/truncated text.
+Note:
+- `OPENAI_API_KEY` is used by the scoring module (current Gemini client path).
+- Summary module uses OpenAI-compatible API (`SUMMARIZER_API_BASE_URL` + `SUMMARIZER_API_KEY`).
 
 ## Feishu Table Schema
 
@@ -77,6 +82,70 @@ Run in order:
 python -m news_pipeline.ingest_news
 python -m news_pipeline.score_news
 python -m news_pipeline.summarize_push
+```
+
+## Runbook (PowerShell)
+
+Run from project root: `E:\git_projects\news-pipeline`
+
+1. Create and install venv dependencies (first time):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m ensurepip --upgrade
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+2. Manual run (one-time):
+
+```powershell
+$env:PYTHONPATH="E:\git_projects\news-pipeline\src"
+.venv\Scripts\python.exe -m news_pipeline.ingest_news
+.venv\Scripts\python.exe -m news_pipeline.score_news
+.venv\Scripts\python.exe -m news_pipeline.summarize_push
+```
+
+3. Create scheduled tasks (already used in this project):
+
+```powershell
+schtasks /Create /TN "news-pipeline-ingest-30min" /TR "E:\git_projects\news-pipeline\scripts\run_ingest_news.cmd" /SC MINUTE /MO 30 /ST 00:00 /F
+schtasks /Create /TN "news-pipeline-score-30min" /TR "E:\git_projects\news-pipeline\scripts\run_score_news.cmd" /SC MINUTE /MO 30 /ST 00:05 /F
+schtasks /Create /TN "news-pipeline-summarize-0930" /TR "E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd" /SC DAILY /ST 09:30 /F
+schtasks /Create /TN "news-pipeline-summarize-1600" /TR "E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd" /SC DAILY /ST 16:00 /F
+```
+
+4. Query tasks:
+
+```powershell
+schtasks /Query /TN "news-pipeline-ingest-30min" /V /FO LIST
+schtasks /Query /TN "news-pipeline-score-30min" /V /FO LIST
+schtasks /Query /TN "news-pipeline-summarize-0930" /V /FO LIST
+schtasks /Query /TN "news-pipeline-summarize-1600" /V /FO LIST
+```
+
+5. Run task immediately:
+
+```powershell
+schtasks /Run /TN "news-pipeline-ingest-30min"
+schtasks /Run /TN "news-pipeline-score-30min"
+schtasks /Run /TN "news-pipeline-summarize-0930"
+```
+
+6. View recent logs:
+
+```powershell
+Get-Content logs\ingest_news.log -Tail 100
+Get-Content logs\score_news.log -Tail 100
+Get-Content logs\summarize_push.log -Tail 100
+```
+
+7. Delete tasks (if needed):
+
+```powershell
+schtasks /Delete /TN "news-pipeline-ingest-30min" /F
+schtasks /Delete /TN "news-pipeline-score-30min" /F
+schtasks /Delete /TN "news-pipeline-summarize-0930" /F
+schtasks /Delete /TN "news-pipeline-summarize-1600" /F
 ```
 
 ## Operational Notes

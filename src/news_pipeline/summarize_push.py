@@ -38,12 +38,13 @@ def main():
         logger.error("Failed to fetch records: %s", e)
         return
     filtered = []
+    summary_threshold = max(4, config.IMPORTANCE_THRESHOLD)
     for r in records:
         fields = r.get("fields", {})
         if fields.get("status") != "NEW":
             continue
         score = normalize_score(fields.get("importance_score"))
-        if score is not None and score >= config.IMPORTANCE_THRESHOLD:
+        if score is not None and score >= summary_threshold:
             filtered.append(r)
     records = filtered
 
@@ -53,27 +54,26 @@ def main():
 
     logger.info("Found %d high-score NEW records", len(records))
 
-    summaries = []
+    news_items = []
     for record in records:
         fields = record["fields"]
         title = fields.get("title", "")
         summary_text = fields.get("summary", "")
         link = extract_url_from_field(fields.get("url"))
         score = fields.get("importance_score", 0)
-
-        text_to_summarize = f"{title} {summary_text}"
-        try:
-            summary = summarizer.summarize(text_to_summarize)
-            if not summary:
-                summary = text_to_summarize[:200] + "..."
-        except Exception as e:
-            logger.warning("Failed to summarize '%s': %s", title, e)
-            summary = text_to_summarize[:200] + "..."
-
-        summaries.append(f"**{title}** (Score: {score})\n{summary}\n[Link]({link})")
+        news_items.append(
+            {
+                "title": title,
+                "summary": summary_text,
+                "url": link,
+                "score": score,
+                "source": fields.get("source", ""),
+            }
+        )
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    message = f"**Research Brief - {now}**\n\n" + "\n\n---\n\n".join(summaries)
+    brief = summarizer.summarize_brief(news_items)
+    message = f"投研快报 - {now}\n\n{brief}"
 
     try:
         client.send_message(message)
