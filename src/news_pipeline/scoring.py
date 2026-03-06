@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Dict
 
+import requests
+
 from . import config
 
 logger = logging.getLogger(__name__)
@@ -25,12 +27,8 @@ SYSTEM_PROMPT = """你是宏观和市场策略分析师。请对新闻进行“�
 }
 """
 
-try:
-    import google.genai as genai
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    logger.warning("GenAI client not available, falling back to heuristic scoring")
+# keep this switch so tests can force heuristic by monkeypatching
+AI_AVAILABLE = True
 
 
 def _extract_score_from_output(output: str):
@@ -51,14 +49,31 @@ def score_item(item: Dict) -> int:
     summary = item.get("summary") or ""
     text = f"{title} {summary}".strip()
 
-    if AI_AVAILABLE and config.OPENAI_API_KEY:
+    if AI_AVAILABLE and config.SUMMARIZER_API_KEY:
         try:
-            client = genai.Client(api_key=config.OPENAI_API_KEY)
-            response = client.models.generate_content(
-                model="models/gemini-3-pro-preview",
-                contents=f"{SYSTEM_PROMPT}\n\nNews:\n{text}",
+            url = f"{config.SUMMARIZER_API_BASE_URL.rstrip('/')}/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {config.SUMMARIZER_API_KEY}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": config.SCORE_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": f"News:\n{text}"},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 300,
+            }
+            resp = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=config.REQUEST_TIMEOUT_SECONDS,
             )
-            output = response.candidates[0].content.parts[0].text.strip()
+            resp.raise_for_status()
+            data = resp.json()
+            output = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             score = _extract_score_from_output(output)
             if score is not None:
                 logger.debug("AI scored item '%s' as %d", item.get("title"), score)
