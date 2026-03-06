@@ -35,18 +35,21 @@ Recommended:
 - `HTTP_PROXY=http://127.0.0.1:15236`
 - `HTTPS_PROXY=http://127.0.0.1:15236`
 - `IMPORTANCE_THRESHOLD=4`
-- `SCORE_BATCH_SIZE=20`
+- `SCORE_BATCH_SIZE=100`
 - `REQUEST_TIMEOUT_SECONDS=20`
 - `FEISHU_MAX_RETRIES=3`
 - `FEISHU_RETRY_BACKOFF_SECONDS=1.5`
 - `FEISHU_INTER_REQUEST_DELAY_SECONDS=0.2`
 - `SUMMARIZER_API_BASE_URL=https://api.gptsapi.net`
 - `SUMMARIZER_API_KEY=...`
-- `SUMMARIZER_MODEL=gpt-4o-mini`
+- `SCORE_MODEL=gemini-2.5-flash`
+- `SUMMARIZER_MODEL=gemini-3-flash-preview`
 
 Note:
-- `OPENAI_API_KEY` is used by the scoring module (current Gemini client path).
-- Summary module uses OpenAI-compatible API (`SUMMARIZER_API_BASE_URL` + `SUMMARIZER_API_KEY`).
+- Scoring and summary both use OpenAI-compatible API (`SUMMARIZER_API_BASE_URL` + `SUMMARIZER_API_KEY`).
+- Scoring model: `SCORE_MODEL` (default `gemini-2.5-flash`).
+- Summary model: `SUMMARIZER_MODEL` (default `gemini-3-flash-preview`).
+- `OPENAI_API_KEY` is currently optional/legacy.
 
 ## Feishu Table Schema
 
@@ -108,10 +111,10 @@ $env:PYTHONPATH="E:\git_projects\news-pipeline\src"
 3. Create scheduled tasks (already used in this project):
 
 ```powershell
-schtasks /Create /TN "news-pipeline-ingest-30min" /TR "E:\git_projects\news-pipeline\scripts\run_ingest_news.cmd" /SC MINUTE /MO 30 /ST 00:00 /F
-schtasks /Create /TN "news-pipeline-score-30min" /TR "E:\git_projects\news-pipeline\scripts\run_score_news.cmd" /SC MINUTE /MO 30 /ST 00:05 /F
-schtasks /Create /TN "news-pipeline-summarize-0930" /TR "E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd" /SC DAILY /ST 09:30 /F
-schtasks /Create /TN "news-pipeline-summarize-1600" /TR "E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd" /SC DAILY /ST 16:00 /F
+cmd /c schtasks /Create /TN "news-pipeline-ingest-30min" /TR "wscript.exe ""E:\git_projects\news-pipeline\scripts\run_hidden.vbs"" ""E:\git_projects\news-pipeline\scripts\run_ingest_news.cmd""" /SC MINUTE /MO 30 /ST 00:00 /F
+cmd /c schtasks /Create /TN "news-pipeline-score-30min" /TR "wscript.exe ""E:\git_projects\news-pipeline\scripts\run_hidden.vbs"" ""E:\git_projects\news-pipeline\scripts\run_score_news.cmd""" /SC MINUTE /MO 15 /ST 00:05 /F
+cmd /c schtasks /Create /TN "news-pipeline-summarize-0930" /TR "wscript.exe ""E:\git_projects\news-pipeline\scripts\run_hidden.vbs"" ""E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd""" /SC DAILY /ST 09:30 /F
+cmd /c schtasks /Create /TN "news-pipeline-summarize-1600" /TR "wscript.exe ""E:\git_projects\news-pipeline\scripts\run_hidden.vbs"" ""E:\git_projects\news-pipeline\scripts\run_summarize_push.cmd""" /SC DAILY /ST 16:00 /F
 ```
 
 4. Query tasks:
@@ -172,11 +175,12 @@ schtasks /Delete /TN "news-pipeline-summarize-1600" /F
 - Cause: unstable network/proxy.
 - Fix: tune retries/timeouts and verify proxy in `.env`.
 
-5. Gemini 429 quota exhausted
+5. AI API quota/rate-limit exhausted
 - Effect: summary/scoring falls back; pipeline still runs.
 
 ## Recommended Scheduling
 
 - `ingest_news`: every 30 minutes
-- `score_news`: every 30 minutes (or more frequently with small batch)
+- `score_news`: every 15 minutes (recommended with `SCORE_BATCH_SIZE=100`)
 - `summarize_push`: 2 times/day (e.g. 09:30, 16:00)
+

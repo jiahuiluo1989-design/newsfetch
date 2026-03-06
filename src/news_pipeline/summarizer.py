@@ -29,6 +29,9 @@ def _chat_completion(system_prompt: str, user_text: str, max_tokens: int) -> str
         "temperature": 0.2,
         "max_tokens": max_tokens,
     }
+    # Some gpt-5-compatible gateways may return empty message content unless reasoning effort is constrained.
+    if str(config.SUMMARIZER_MODEL).startswith("gpt-5"):
+        payload["reasoning_effort"] = "low"
     resp = requests.post(
         url,
         headers=headers,
@@ -40,6 +43,14 @@ def _chat_completion(system_prompt: str, user_text: str, max_tokens: int) -> str
     choices = data.get("choices", [])
     if choices:
         content = choices[0].get("message", {}).get("content", "")
+        if isinstance(content, list):
+            text_parts = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text_parts.append(part.get("text", ""))
+                elif isinstance(part, str):
+                    text_parts.append(part)
+            content = "\n".join([x for x in text_parts if x])
         if content:
             return str(content).strip()
     raise ValueError("No summary content in API response")
@@ -80,4 +91,6 @@ def summarize_brief(items, max_tokens: int = 1200) -> str:
             return _chat_completion(SYSTEM, prompt_text, max_tokens)
         except Exception as e:
             logger.warning("AI brief summarization failed: %s", e)
+    else:
+        logger.warning("SUMMARIZER_API_KEY is not set; using degraded brief mode")
     return "投研快报（降级模式）\n" + "\n".join([f"- {x.get('title','')}" for x in items[:20]])

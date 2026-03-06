@@ -1,4 +1,4 @@
-import os
+﻿import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +18,8 @@ FEISHU_HOST = os.getenv("FEISHU_HOST", "https://open.feishu.cn")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SUMMARIZER_API_BASE_URL = os.getenv("SUMMARIZER_API_BASE_URL", "https://api.gptsapi.net")
 SUMMARIZER_API_KEY = os.getenv("SUMMARIZER_API_KEY")
-SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gpt-4o-mini")
+SCORE_MODEL = os.getenv("SCORE_MODEL", "gemini-2.5-flash")
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gemini-3-flash-preview")
 
 # Optional HTTP/HTTPS proxy (e.g. http://localhost:15236)
 HTTP_PROXY = os.getenv("HTTP_PROXY")
@@ -40,3 +41,4 @@ FEISHU_MAX_RETRIES = int(os.getenv("FEISHU_MAX_RETRIES", "3"))
 FEISHU_RETRY_BACKOFF_SECONDS = float(os.getenv("FEISHU_RETRY_BACKOFF_SECONDS", "1.5"))
 FEISHU_INTER_REQUEST_DELAY_SECONDS = float(os.getenv("FEISHU_INTER_REQUEST_DELAY_SECONDS", "0.2"))
 SCORE_BATCH_SIZE = int(os.getenv("SCORE_BATCH_SIZE", "50"))
+
